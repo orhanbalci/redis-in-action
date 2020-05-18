@@ -1,4 +1,3 @@
-use redis::Cmd;
 use redis::Commands;
 use redis::Connection;
 use std::collections::HashMap;
@@ -80,4 +79,35 @@ pub fn get_articles(
         .iter()
         .map(|id| conn.hgetall(id).unwrap())
         .collect::<Vec<_>>())
+}
+
+pub fn add_remove_groups(
+    conn: &mut Connection,
+    article_id: u64,
+    to_add: Vec<&str>,
+    to_remove: Vec<&str>,
+) -> Result<bool, Box<dyn Error>> {
+    let article = format!("article:{}", article_id);
+    to_remove.iter().for_each(|&rem| {
+        let _: u8 = conn.srem(format!("group:{}", rem), &article).unwrap();
+    });
+    to_add.iter().for_each(|&add| {
+        let _: u8 = conn.sadd(format!("group:{}", add), &article).unwrap();
+    });
+
+    Ok(true)
+}
+
+pub fn get_group_articles(
+    conn: &mut Connection,
+    group: &str,
+    page: u8,
+    order: &str,
+) -> Result<Vec<HashMap<String, String>>, Box<dyn Error>> {
+    let key = format!("{}{}", order, group);
+    if !conn.exists(&key)? {
+        conn.zinterstore_max(key.as_str(), &[&format!("group:{}", group), order])?;
+        conn.expire(&key, 60)?;
+    }
+    get_articles(conn, page, &key)
 }
