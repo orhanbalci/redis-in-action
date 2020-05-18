@@ -1,0 +1,9 @@
+[package]
+authors = ["orhanbalci@gmail.com <orhanbalci@gmail.com>"]
+edition = "2018"
+name = "redis-in-action"
+version = "0.1.0"
+
+[dependencies]
+redis = "*"
+
